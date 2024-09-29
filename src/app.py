@@ -2,22 +2,31 @@ from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 
-app = Flask(__name__)
+# Import db from models.py
+from models import db
 
-# Database configuration
-app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+mysqlconnector://admin:ms-reminders@reminders-db.cl0ucq86mgcw.us-east-1.rds.amazonaws.com:3306/reminders-db'
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+def create_app():
+    app = Flask(__name__)
 
-db = SQLAlchemy(app)
-migrate = Migrate(app, db)
+    # Database configuration
+    app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+mysqlconnector://admin:dbuserdbuser@reminders-db-1.clchno0vc63f.us-east-1.rds.amazonaws.com:3306/reminders_db'
+    app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
-# Register reminders blueprint
-from routes.reminders import reminders
-app.register_blueprint(reminders)
+    # Initialize db and migrate with the app
+    db.init_app(app)
+    migrate = Migrate(app, db)
 
-@app.route('/')
-def index():
-    return "Reminders Microservice is running!"
+    # Register blueprints
+    from routes.reminders import reminders
+    app.register_blueprint(reminders)
+
+    @app.route('/')
+    def index():
+        return "Reminders Microservice is running!"
+
+    return app
 
 if __name__ == '__main__':
+    app = create_app()
     app.run(debug=True, host='0.0.0.0', port=5000)
+
