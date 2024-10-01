@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reminders Microservice</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+        label {
+            display: inline-block;
+            width: 100px;
+            margin-bottom: 10px;
+        }
+        input, textarea {
+            width: 200px;
+            margin-bottom: 10px;
+        }
+        button {
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Reminders Microservice UI</h1>
+
+    <h2>Create a Reminder</h2>
+    <label>Task ID:</label><input type="text" id="task_id"><br>
+    <label>User ID:</label><input type="text" id="user_id"><br>
+    <label>Reminder Time:</label><input type="datetime-local" id="reminder_time"><br>
+    <label>Message:</label><textarea id="message"></textarea><br>
+    <label>Status:</label><input type="checkbox" id="status" checked><br>
+    <button onclick="createReminder()">Create Reminder</button>
+
+    <h2>Get Reminders</h2>
+    <label>User ID:</label><input type="text" id="get_user_id"><br>
+    <label>Task ID:</label><input type="text" id="get_task_id"><br>
+    <button onclick="getReminders()">Get Reminders</button>
+    <div id="reminders_output"></div>
+
+    <h2>Update Reminder</h2>
+    <label>Reminder ID:</label><input type="text" id="reminder_id_update"><br>
+    <label>Reminder Time:</label><input type="datetime-local" id="reminder_time_update"><br>
+    <label>Message:</label><textarea id="message_update"></textarea><br>
+    <label>Status:</label><input type="checkbox" id="status_update"><br>
+    <button onclick="updateReminder()">Update Reminder</button>
+
+    <h2>Delete Reminder</h2>
+    <label>Reminder ID:</label><input type="text" id="reminder_id_delete"><br>
+    <button onclick="deleteReminder()">Delete Reminder</button>
+    <div id="delete_output"></div>
+
+    <script>
+        const apiUrl = 'http://ec2-54-172-192-167.compute-1.amazonaws.com:5000/reminders';
+
+        function createReminder() {
+            const data = {
+                task_id: document.getElementById('task_id').value,
+                user_id: document.getElementById('user_id').value,
+                reminder_time: document.getElementById('reminder_time').value,
+                message: document.getElementById('message').value,
+                status: document.getElementById('status').checked
+            };
+
+            fetch(apiUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            })
+            .then(response => response.json())
+            .then(data => alert(`Reminder created: ${JSON.stringify(data)}`))
+            .catch(error => console.error('Error:', error));
+        }
+
+        function getReminders() {
+            const userId = document.getElementById('get_user_id').value;
+            const taskId = document.getElementById('get_task_id').value;
+            let url = apiUrl;
+
+            if (userId || taskId) {
+                url += '?';
+                if (userId) url += `user_id=${userId}&`;
+                if (taskId) url += `task_id=${taskId}`;
+            }
+
+            fetch(url)
+            .then(response => response.json())
+            .then(data => {
+                const output = document.getElementById('reminders_output');
+                output.innerHTML = '<h3>Reminders:</h3><pre>' + JSON.stringify(data, null, 2) + '</pre>';
+            })
+            .catch(error => console.error('Error:', error));
+        }
+
+        function updateReminder() {
+            const reminderId = document.getElementById('reminder_id_update').value;
+            const data = {
+                reminder_time: document.getElementById('reminder_time_update').value,
+                message: document.getElementById('message_update').value,
+                status: document.getElementById('status_update').checked
+            };
+
+            fetch(`${apiUrl}/${reminderId}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            })
+            .then(response => response.json())
+            .then(data => alert(`Reminder updated: ${JSON.stringify(data)}`))
+            .catch(error => console.error('Error:', error));
+        }
+
+        function deleteReminder() {
+            const reminderId = document.getElementById('reminder_id_delete').value;
+
+            fetch(`${apiUrl}/${reminderId}`, { method: 'DELETE' })
+            .then(response => response.json())
+            .then(data => {
+                const output = document.getElementById('delete_output');
+                output.innerHTML = `<h3>${data.message}</h3>`;
+            })
+            .catch(error => console.error('Error:', error));
+        }
+    </script>
+</body>
+</html>
+

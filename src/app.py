@@ -1,6 +1,7 @@
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
+from flask import send_from_directory
 
 # Import db from models.py
 from models import db
@@ -24,7 +25,14 @@ def create_app():
     def index():
         return "Reminders Microservice is running!"
 
+    @app.route('/ui')
+    def serve_ui():
+        return send_from_directory('.', 'reminders_ui.html')
+
     return app
+
+
+
 
 if __name__ == '__main__':
     app = create_app()
