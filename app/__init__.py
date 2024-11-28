@@ -21,6 +21,7 @@ def create_app():
 
     with app.app_context():
         from app import routes
+        from app.models import Reminder
         db.create_all()
 
     @app.before_request

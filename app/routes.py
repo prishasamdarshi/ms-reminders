@@ -2,6 +2,8 @@ from flask import Blueprint, request, jsonify
 from datetime import datetime
 from app.models import Reminder, db
 from app.utils import send_email
+from sqlalchemy.sql import text
+import json
 
 reminder_bp = Blueprint('reminder', __name__)
 
@@ -69,3 +71,40 @@ def send_notifications():
             body=f"Task ID {reminder.task_id}: {reminder.message}"
         )
     return jsonify({'message': 'Notifications sent successfully'})
+
+
+@reminder_bp.route('/reminders/grouped', methods=['GET'])
+def get_grouped_reminders_mysql():
+    """
+    Route to group reminders by user using MySQL-compatible JSON functions.
+    """
+    now = datetime.now().date()
+    
+    # Raw SQL query for MySQL
+    sql_query = text("""
+        SELECT 
+            user_id,
+            JSON_ARRAYAGG(
+                JSON_OBJECT(
+                    'task_id', task_id,
+                    'reminder_time', reminder_time,
+                    'message', message
+                )
+            ) AS tasks
+        FROM reminder
+        WHERE reminder_time = :reminder_time
+        GROUP BY user_id
+    """)
+    
+    result = db.session.execute(sql_query, {'reminder_time': now}).fetchall()
+    
+    # Parse the JSON strings in `tasks` back into Python objects
+    reminders_by_user = [
+        {
+            'user_id': row.user_id,
+            'tasks': json.loads(row.tasks)  # Convert the JSON string to a Python list
+        }
+        for row in result
+    ]
+    
+    return jsonify({'reminders': reminders_by_user}), 200
