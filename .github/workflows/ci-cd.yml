@@ -1,0 +1,53 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main ]  # Adjust if you use a different branch
+
+jobs:
+  build-test-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+    # Step 1: Check out the repository code
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    # Step 2: Set up Python environment
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.9'  # Change to your Python version
+
+    # Step 3: Install dependencies
+    - name: Install dependencies
+      run: |
+        pip install -r requirements.txt
+
+    # Step 4: Run tests
+    - name: Run tests
+      run: |
+        pytest  # Adjust if you use a different test command
+
+    # Step 5: Deploy to EC2 via SSH
+    - name: Deploy to EC2 via SSH
+      uses: appleboy/ssh-action@v0.1.7
+      with:
+        host: ${{ secrets.EC2_HOST }}  # Your EC2 instance's IP or DNS
+        username: ${{ secrets.EC2_USER }}  # Your SSH username
+        key: ${{ secrets.EC2_SSH_KEY }}  # Your SSH private key
+        port: 22  # SSH port
+        script: |
+          # Navigate to the application directory
+          cd /home/ec2-user/ms-reminders  # Update with your app's path on EC2
+
+          # Pull the latest code
+          git pull origin main
+
+          # Install dependencies
+          pip install -r requirements.txt
+
+          # Restart the application service
+          pkill -f 'python app.py' || true
+          nohup python app.py &
+
