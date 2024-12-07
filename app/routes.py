@@ -8,6 +8,11 @@ import json
 reminder_bp = Blueprint('reminder', __name__)
 
 
+@reminder_bp.route("/", methods=["GET"])
+def home():
+    return "Welcome to the Reminders Microservice"
+
+
 @reminder_bp.route('/reminders', methods=['POST'])
 def create_reminder():
     data = request.json
