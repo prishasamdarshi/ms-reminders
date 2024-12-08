@@ -10,11 +10,41 @@ reminder_bp = Blueprint('reminder', __name__)
 
 @reminder_bp.route("/", methods=["GET"])
 def home():
+    """
+    Welcome Route
+    ---
+    responses:
+      200:
+        description: Welcome message for the Reminders Microservice
+    """
     return "Welcome to the Reminders Microservice"
 
 
 @reminder_bp.route('/reminders', methods=['POST'])
 def create_reminder():
+    """
+    Create a new reminder
+    ---
+    parameters:
+      - name: body
+        in: body
+        required: true
+        schema:
+          type: object
+          properties:
+            task_id:
+              type: integer
+            user_id:
+              type: integer
+            reminder_time:
+              type: string
+              format: date
+            message:
+              type: string
+    responses:
+      201:
+        description: Reminder created successfully
+    """
     data = request.json
     reminder = Reminder(
         task_id=data['task_id'],
@@ -29,6 +59,34 @@ def create_reminder():
 
 @reminder_bp.route('/reminders/<int:reminder_id>', methods=['GET'])
 def get_reminder(reminder_id):
+    """
+    Get a reminder by ID
+    ---
+    parameters:
+      - name: reminder_id
+        in: path
+        required: true
+        type: integer
+    responses:
+      200:
+        description: Reminder details
+        schema:
+          type: object
+          properties:
+            id:
+              type: integer
+            task_id:
+              type: integer
+            user_id:
+              type: integer
+            reminder_time:
+              type: string
+              format: date
+            message:
+              type: string
+      404:
+        description: Reminder not found
+    """
     reminder = Reminder.query.get(reminder_id)
     if not reminder:
         return jsonify({'error': 'Reminder not found'}), 404
@@ -39,77 +97,3 @@ def get_reminder(reminder_id):
         'reminder_time': reminder.reminder_time,
         'message': reminder.message
     })
-
-
-@reminder_bp.route('/reminders/<int:reminder_id>', methods=['PUT'])
-def edit_reminder(reminder_id):
-    data = request.json
-    reminder = Reminder.query.get(reminder_id)
-    if not reminder:
-        return jsonify({'error': 'Reminder not found'}), 404
-    reminder.reminder_time = datetime.strptime(
-        data['reminder_time'], "%Y-%m-%d")
-    reminder.message = data.get('message', reminder.message)
-    db.session.commit()
-    return jsonify({'message': 'Reminder updated successfully'})
-
-
-@reminder_bp.route('/reminders/<int:reminder_id>', methods=['DELETE'])
-def delete_reminder(reminder_id):
-    reminder = Reminder.query.get(reminder_id)
-    if not reminder:
-        return jsonify({'error': 'Reminder not found'}), 404
-    db.session.delete(reminder)
-    db.session.commit()
-    return jsonify({'message': 'Reminder deleted successfully'})
-
-
-@reminder_bp.route('/notifications', methods=['POST'])
-def send_notifications():
-    reminders = Reminder.query.filter(
-        Reminder.reminder_time == datetime.now().date()
-    ).all()
-    for reminder in reminders:
-        send_email(
-            to=f"user_{reminder.user_id}@example.com",
-            subject="Reminder Notification",
-            body=f"Task ID {reminder.task_id}: {reminder.message}"
-        )
-    return jsonify({'message': 'Notifications sent successfully'})
-
-
-@reminder_bp.route('/reminders/grouped', methods=['GET'])
-def get_grouped_reminders_mysql():
-    """
-    Route to group reminders by user using MySQL-compatible JSON functions.
-    """
-    now = datetime.now().date()
-    
-    # Raw SQL query for MySQL
-    sql_query = text("""
-        SELECT 
-            user_id,
-            JSON_ARRAYAGG(
-                JSON_OBJECT(
-                    'task_id', task_id,
-                    'reminder_time', reminder_time,
-                    'message', message
-                )
-            ) AS tasks
-        FROM reminder
-        WHERE reminder_time = :reminder_time
-        GROUP BY user_id
-    """)
-    
-    result = db.session.execute(sql_query, {'reminder_time': now}).fetchall()
-    
-    # Parse the JSON strings in `tasks` back into Python objects
-    reminders_by_user = [
-        {
-            'user_id': row.user_id,
-            'tasks': json.loads(row.tasks)  # Convert the JSON string to a Python list
-        }
-        for row in result
-    ]
-    
-    return jsonify({'reminders': reminders_by_user}), 200
